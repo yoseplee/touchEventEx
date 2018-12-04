@@ -10,7 +10,7 @@
         android:id="@+id/linearLayout1"
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
-        android:background="#ffffff"
+        android:background="@color/colorPrimaryDark"
         android:orientation="vertical"
         tools:layout_editor_absoluteX="133dp"
         tools:layout_editor_absoluteY="72dp">
@@ -19,6 +19,7 @@
             android:id="@+id/textView1"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:textColor="#ffffff"
             android:text="화면을 터치하면"
             android:textAppearance="?android:attr/textAppearanceLarge"
             tools:textColor="#000000" />
@@ -27,12 +28,13 @@
             android:id="@+id/TextView2"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:textColor="#ffffff"
             android:text="touch time "
             tools:textColor="#000000" />
 
         <Button
             android:id="@+id/button1"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="입력된 진동 확인하기." />
 
