@@ -17,13 +17,15 @@ import static android.media.AudioRecord.ERROR;
 
 /*
 Author: Yosep Lee
-HCI 과제로 제작중.
+HCI 과제로 제작중. - 싱글터치
 추후 Vibrator는 Thread로 제어되어야 할 필요가 있을 수 있음.
 매핑 테이블과 입력된 코드와 일치 완료.
 
 2018.12.04.
 ISSUE#1: 입력하다 중간에 멈추게 되면? 타이머로 재고 있다가 refresh를 시켜주는 등 적용이 필요함.
 ISSUE#2: 중간에 입력 취소 하고 싶으면?
+
+2018.12.15. 주석 달기 완료.
 
 추후 의사소통을 위한 인터페이스로 발전할 수 있지 않을까?
 현재는 접촉수화만을 이용하고 있는데,
@@ -40,7 +42,7 @@ public class MainActivity extends AppCompatActivity {
 
     //진동 관련 변수 제어
     final int MAX_VIBTIME = 3000;
-    final int thresold = 210; //short 미만을 걸러내기 위한 수치.
+    final int thresold = 130; //short 미만을 걸러내기 위한 수치.
     final long wait = 150;
 
     //진동을 저장하기 위한 버퍼 변수와 포인터 플래그
@@ -57,17 +59,22 @@ public class MainActivity extends AppCompatActivity {
     TextView textView2;
 
 
+    //안드로이드의 한 액티비티(화면)이 최초 실행될 때 실행되는 함수이다. 각종 값을 초기화 한다.
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        //진동을 수행하는 객체 초기화
         vibrator = (Vibrator)getSystemService(Context.VIBRATOR_SERVICE);
+
+        //UI관련 객체 초기화
+        setContentView(R.layout.activity_main);
         textView1 = (TextView) findViewById(R.id.textView1);
         textView2 = (TextView) findViewById(R.id.TextView2);
+        Button b1 = (Button)findViewById(R.id.button1);
 
+        //진동 패턴을 담을 배열을 초기화
         buf = new long[100];
         normBuf = new int[5];
-        Button b1 = (Button)findViewById(R.id.button1);
 
         // TTS를 생성하고 OnInitListener로 초기화 한다.
         tts = new TextToSpeech(this, new TextToSpeech.OnInitListener() {
@@ -89,6 +96,8 @@ public class MainActivity extends AppCompatActivity {
             }
 
         });
+
+        //대기 상태의 진동을 무제한 수행한다. repeat 0-> inf, 1-> once
         vibrator.vibrate(initBuf, 0);
     }
 
@@ -101,17 +110,21 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onTouchEvent(MotionEvent event) {
 
+        //접촉 전후 인터벌을 재기 위한 지역번수.
         long interval = 0;
 
         //get touch interval
         switch(event.getAction()) {
             case MotionEvent.ACTION_DOWN :
+                //눌렀을 때 처리
                 start = System.currentTimeMillis();
                 vibrator.vibrate(MAX_VIBTIME);
                 break;
             case MotionEvent.ACTION_UP :
+                //뗐을 때 처리
                 vibrator.cancel();
                 end = System.currentTimeMillis();
+                //인터벌 계산
                 interval = end - start;
                 textView2.setText("Touch Interval:  " + interval + " (" + end + " - " + start + ")");
                 break;
@@ -119,16 +132,19 @@ public class MainActivity extends AppCompatActivity {
                 break;
         }
 
-        //save interval
+        //이벤트나 끝나고 난 후 후처리한다.
+        //각기 다른 진동 시간을 normalize하여 일정하게 넣어주고
+        //long인지 short인지 판별한다.
 
-        //condition... threshold
+        //설정해 놓은 thresold 미만 시간의 진동은 무시한다.
         if(interval > thresold) {
             saveInterval(interval);
-
             int normedInterval = normalizeVibe(interval);
             normBuf[normBufPos++] = normedInterval;
 
+            //입력 3개가 모두 full인 경우. 즉 3개의 입력을 모두 받은 경우 아래 처리한다.
             if(normBufPos > 2) {
+                //112 등 코드를 사전에 예약된 스트링으로 변환시켜 오는 함수.
                 String toSpeech = convertToText();
 
                 //TTS
@@ -136,11 +152,11 @@ public class MainActivity extends AppCompatActivity {
                 tts.setSpeechRate(1f);    // 읽는 속도 설정
                 tts.speak(toSpeech,TextToSpeech.QUEUE_FLUSH, null);  //tts로 스트링 읽기
 
-                //display
+                //UI에 보이도록 처리
                 displayTextView();
                 clearNormBuf();
 
-                //vib
+                //모두 종료되면 다시 대기 상태의 패턴 진동이 일어나게 처리한다.
                 vibrator.vibrate(initBuf, 0);
                 return false;
             }
@@ -209,6 +225,21 @@ public class MainActivity extends AppCompatActivity {
         return result;
     }
 
+    //Long과 short를 판별하는 함수.
+    public int normalizeVibe(long interval) {
+        // classity interver into short, long
+        // short -> 1, long > 2.
+        if(interval < 350) {
+            //short
+            return 1;
+        }
+        else if(interval > 349) {
+            //long
+            return 2;
+        }
+        return -1;
+    }
+
     public void displayTextView() {
         //from normalized one.
         String toDisplay = "";
@@ -265,17 +296,4 @@ public class MainActivity extends AppCompatActivity {
         bufPos = 0;
     }
 
-    public int normalizeVibe(long interval) {
-        // classity interver into short, long
-        // short -> 1, long > 2.
-        if(interval < 500) {
-            //short
-            return 1;
-        }
-        else if(interval > 499) {
-            //long
-            return 2;
-        }
-        return -1;
-    }
 }
